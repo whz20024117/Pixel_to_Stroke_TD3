@@ -34,27 +34,31 @@ class SketchDiscriminator:
 class SketchDesigner(gym.Env):
     metadata = {'render.modes': ['human']}
 
-    def __init__(self, classifier, max_stroke=config['MAX_STROKE']):
+    def __init__(self, classifier, max_T=config['MAX_T']):
         super(SketchDesigner, self).__init__()
         self.action_space = spaces.Box(low=-1, high=1, shape=(14,), dtype=np.float32)
         self.observation_space = spaces.Box(low=0, high=255,
-                                            shape=(config['STATE_DIM'], config['STATE_DIM'], 1), dtype=np.uint8)
+                                            shape=(config['STATE_DIM'][0], config['STATE_DIM'][0], 1), dtype=np.uint8)
         self.classifier = classifier
-        self.game_count = 0
         self.stroke_count = 0
-        self.dim = self.action_space.shape
+        self.t = 0
+        self.dim = self.observation_space.shape
         self.canvas = np.zeros(self.dim)
-        self.max_stroke = max_stroke
+        self.max_T = max_T
         self.terminal = False
         self.previous_score = 0.25
+        self.policy = None
 
-    def step(self, action):
+    def get_policy(self, policy):
+        assert self.policy is None
+        self.policy = policy
 
-        # do_nothing, q_line, q_curve, x0_line, y0_line, x1_line ,y1_line,
-        # x0_c, y0_c, x1_c, y1_c, x2_c, y2_c, c
-
-        if self.stroke_count >= self.max_stroke - 1:
-            self.terminal = True
+    def draw(self, action):
+        action = np.clip(action, -1, 1)
+        a = scale(action[0:3], -1, 1, 0, 1)
+        b = scale(action[3:13], -1, 1, 0, config['STATE_DIM'][0] - 1)
+        c = scale(action[13:14], -1, 1, 0, 4)
+        action = np.concatenate([a, b, c]).reshape(config['ACTION_DIM'],)
 
         # Parameter Validation and noises
         action_category = np.argmax(action[0:3])
@@ -106,37 +110,50 @@ class SketchDesigner(gym.Env):
                 cc = np.clip(cc, 0, config['STATE_DIM'][1] - 1)
                 self.canvas[rr, cc] = 255
 
+    def step(self, action):
 
-        score = self.classifier.get_score(self.canvas.reshape(-1, self.dim[0], self.dim[1], 1))
-
-        if score > 0.95:
+        # do_nothing, q_line, q_curve, x0_line, y0_line, x1_line ,y1_line,
+        # x0_c, y0_c, x1_c, y1_c, x2_c, y2_c, c
+        self.t = self.t + 1
+        if self.t == self.max_T - 1:
             self.terminal = True
 
-        if action_category == 0:
-            self.terminal = True
+        self.draw(action)
 
-        if self.terminal:
-            if self.stroke_count == 0:
-                reward = -1
-            else:
-                reward = score - self.previous_score
-            self.previous_score = score
+        if self.terminal and self.stroke_count == 0:
+            reward = -1
         else:
-            reward = 0
+            reward = self.find_reward()
 
         return self.canvas, reward, self.terminal, {}
+
+    def find_reward(self, n=16):
+        if self.terminal:
+            return self.classifier.get_score(self.canvas.reshape(-1, self.dim[0], self.dim[1], 1))
+
+        # Roll-out
+        canvas_current = self.canvas
+        r = 0
+        for i in range(n):
+            self.canvas = canvas_current
+            for tau in range(self.t + 1, self.max_T):
+                _a = self.policy.step(self.canvas.reshape(-1, self.dim[0], self.dim[1], 1)) + np.random.normal(0, 1)
+                self.draw(_a)
+            r = r + self.classifier.get_score(self.canvas.reshape(-1, self.dim[0], self.dim[1], 1)) / n
+
+        self.canvas = canvas_current
+        return r
 
     def reset(self):
         self.canvas = np.zeros(self.dim)
         self.stroke_count = 0
+        self.t = 0
         self.terminal = False
-
-        # print(self.classifier.number_of_goals)
 
         return self.canvas
 
     def render(self, mode='human', close=False):
-        pass
+        print(self.canvas)
 
 
 def move_point(x, y):
@@ -157,3 +174,8 @@ def move_point(x, y):
             break
 
     return x, y
+
+
+def scale(x, old_min, old_max, new_min=0, new_max=1):
+    x = np.array(x)
+    return new_min + ((x - old_min)*(new_max - new_min))/(old_max - old_min)

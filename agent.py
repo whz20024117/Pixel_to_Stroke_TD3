@@ -1,6 +1,4 @@
 from stable_baselines.td3 import TD3, LnCnnPolicy, LnMlpPolicy
-from stable_baselines.common.vec_env import DummyVecEnv
-from stable_baselines.ddpg.noise import NormalActionNoise
 from env import *
 import tensorflow as tf
 from config import config

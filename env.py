@@ -5,6 +5,7 @@ from config import config
 import tensorflow as tf
 from pretrianGAN.utils import discriminator
 from skimage.draw import line, bezier_curve
+from matplotlib import pyplot as plt
 
 
 class SketchDiscriminator:
@@ -129,7 +130,7 @@ class SketchDesigner(gym.Env):
 
     def find_reward(self, n=16):
         if self.terminal:
-            return self.classifier.get_score(self.canvas.reshape(-1, self.dim[0], self.dim[1], 1))
+            return self.classifier.get_score(self.get_state().reshape(-1, self.dim[0], self.dim[1], 1))
 
         # Roll-out
         canvas_current = self.canvas
@@ -137,9 +138,9 @@ class SketchDesigner(gym.Env):
         for i in range(n):
             self.canvas = canvas_current
             for tau in range(self.t + 1, self.max_T):
-                _a = self.policy.step(self.canvas.reshape(-1, self.dim[0], self.dim[1], 1)) + np.random.normal(0, 1)
+                _a = self.policy.step(self.get_state().reshape(-1, self.dim[0], self.dim[1], 1)) + np.random.normal(0, 1)
                 self.draw(_a)
-            r = r + self.classifier.get_score(self.canvas.reshape(-1, self.dim[0], self.dim[1], 1)) / n
+            r = r + self.classifier.get_score(self.get_state().reshape(-1, self.dim[0], self.dim[1], 1)) / n
 
         self.canvas = canvas_current
         return r
@@ -153,10 +154,12 @@ class SketchDesigner(gym.Env):
         return self.get_state()
 
     def render(self, mode='human', close=False):
-        print(self.canvas)
+        plt.imshow(self.canvas.reshape(28, 28))
+        plt.show()
 
     def get_state(self):
         if self.stroke_count==0:
+            rr, cc = np.random.uniform()
             return np.random.uniform(0, 0.1, self.canvas.shape)
         else:
             return self.canvas/255

@@ -11,5 +11,7 @@ agent = TD3(policy, env, random_exploration=0.1, tensorboard_log='./log/',verbos
 agent.get_env().get_policy(agent.policy_tf)
 
 
-agent.learn(10000)
-agent.save('./save/model')
+for _ in range(200):
+    agent.learn(1000, reset_num_timesteps=False)
+    agent.save('./save/model')
+

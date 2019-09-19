@@ -157,7 +157,7 @@ class SketchDesigner(gym.Env):
 
     def get_state(self):
         if self.stroke_count==0:
-            return np.random.uniform(0,1,self.canvas.shape)
+            return np.random.uniform(0, 0.1, self.canvas.shape)
         else:
             return self.canvas/255
 

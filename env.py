@@ -125,7 +125,7 @@ class SketchDesigner(gym.Env):
         else:
             reward = self.find_reward()
 
-        return self.canvas, reward, self.terminal, {}
+        return self.get_state(), reward, self.terminal, {}
 
     def find_reward(self, n=16):
         if self.terminal:
@@ -150,10 +150,16 @@ class SketchDesigner(gym.Env):
         self.t = 0
         self.terminal = False
 
-        return self.canvas
+        return self.get_state()
 
     def render(self, mode='human', close=False):
         print(self.canvas)
+
+    def get_state(self):
+        if self.stroke_count==0:
+            return np.random.uniform(0,1,self.canvas.shape)
+        else:
+            return self.canvas/255
 
 
 def move_point(x, y):

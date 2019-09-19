@@ -122,7 +122,7 @@ class SketchDesigner(gym.Env):
         self.draw(action)
 
         if self.terminal and self.stroke_count == 0:
-            reward = -1
+            reward = -100
         else:
             reward = self.find_reward()
 

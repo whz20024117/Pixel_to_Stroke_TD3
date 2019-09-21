@@ -1,5 +1,6 @@
 import tensorflow as tf
 from pretrianGAN.config import config
+import numpy as np
 
 
 def lrelu(x):
@@ -51,3 +52,6 @@ def generator(z, rate, is_training):
         x = tf.layers.conv2d_transpose(x, kernel_size=5, filters=1, strides=1, padding='same', activation=tf.nn.sigmoid)
         return x
 
+
+def deblur(img):
+    return np.array([np.array([1 if i > 150 else 0 for i in im]) for im in img]).reshape(-1, 784)

@@ -8,7 +8,7 @@ from pretrianGAN.config import config
 def main(sess):
     dloader = DataLoader(config['DATA_PATH'])
 
-    tf.reset_default_graph()
+    #tf.reset_default_graph()
     batch_size = config['BATCH_SIZE']
     n_noise = config['N_NOISE']
 

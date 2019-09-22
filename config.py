@@ -14,6 +14,5 @@ config = {
     'TRAIN_EPOCH': 5,
     'BATCH_SIZE': 64,
 
-    'SAVED_GAN': './saved_gan/1',
-    'SAVED_POLICY': './saved_policy/1'
+    'SAVED_GAN': './saved_gan/2',
 }

@@ -42,7 +42,7 @@ def main(sess):
 
     sess.run(tf.global_variables_initializer())
 
-    for i in range(60000):
+    for i in range(200000):
         train_d = True
         train_g = True
         rate_train = 0.4

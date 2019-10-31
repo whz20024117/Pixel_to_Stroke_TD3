@@ -3,7 +3,7 @@ from gym import spaces
 import numpy as np
 from config import config
 import tensorflow as tf
-from pretrianGAN.utils import discriminator
+from pretrianGAN.utils import discriminator, CNN
 from skimage.draw import line, bezier_curve
 from matplotlib import pyplot as plt
 
@@ -11,7 +11,7 @@ from matplotlib import pyplot as plt
 class SketchDiscriminator:
     def __init__(self, path):
         self.X = tf.placeholder(tf.float32, shape=[None] + config['STATE_DIM'] + [1], name='X')
-        self.score = discriminator(self.X, rate=1.0)
+        self.score = discriminator(self.X, rate=0.0)
 
         self.saver = tf.train.Saver()
         self.sess = tf.Session()
@@ -22,6 +22,31 @@ class SketchDiscriminator:
     def inference(self, X):
         X = X.reshape([-1] + config['STATE_DIM'] + [1])
         result = self.sess.run(self.score, feed_dict={self.X: X})
+        return X.reshape(config['STATE_DIM']), result
+
+    def get_score(self, X):
+        X = X.reshape([-1] + config['STATE_DIM'] + [1])
+        _, scores = self.inference(X)
+        score = scores[0][0]
+
+        return score
+
+
+class SketchClassifier:
+    def __init__(self, path):
+        self.X = tf.placeholder(tf.float32, shape=[None] + config['STATE_DIM'] + [1], name='X')
+        self.keep_prob = tf.placeholder(tf.float32, name="keep_prob")
+        self.score = CNN(self.X, self.keep_prob)
+
+        self.saver = tf.train.Saver()
+        self.sess = tf.Session()
+        self.init = tf.global_variables_initializer()
+        self.sess.run(self.init)
+        self.saver.restore(self.sess, tf.train.latest_checkpoint(path))
+
+    def inference(self, X):
+        X = X.reshape([-1] + config['STATE_DIM'] + [1])
+        result = self.sess.run(self.score, feed_dict={self.X: X, self.keep_prob: 1.0})
         return X.reshape(config['STATE_DIM']), result
 
     def get_score(self, X):

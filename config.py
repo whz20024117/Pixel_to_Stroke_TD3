@@ -15,4 +15,5 @@ config = {
     'BATCH_SIZE': 64,
 
     'SAVED_GAN': './saved_gan/2',
+    'SAVED_CNN': './saved_cnn'
 }

@@ -14,7 +14,11 @@ class SketchDiscriminator:
         self.score = discriminator(self.X, rate=0.0)
 
         self.saver = tf.train.Saver()
-        self.sess = tf.Session()
+
+        conf = tf.ConfigProto()
+        conf.gpu_options.allow_growth = True
+
+        self.sess = tf.Session(config=conf)
         self.init = tf.global_variables_initializer()
         self.sess.run(self.init)
         self.saver.restore(self.sess, tf.train.latest_checkpoint(path))
@@ -39,7 +43,11 @@ class SketchClassifier:
         self.score = CNN(self.X, self.keep_prob)
 
         self.saver = tf.train.Saver()
-        self.sess = tf.Session()
+
+        conf = tf.ConfigProto()
+        conf.gpu_options.allow_growth = True
+
+        self.sess = tf.Session(config=conf)
         self.init = tf.global_variables_initializer()
         self.sess.run(self.init)
         self.saver.restore(self.sess, tf.train.latest_checkpoint(path))
@@ -72,7 +80,7 @@ class SketchDesigner(gym.Env):
         self.canvas = np.zeros(self.dim)
         self.max_T = max_T
         self.terminal = False
-        self.previous_score = 0.25
+        #self.previous_score = 0.25
         self.policy = None
 
     def get_policy(self, policy):
@@ -105,7 +113,7 @@ class SketchDesigner(gym.Env):
             self.stroke_count += 1
             # Draw line
             rr, cc = line(axis[0], axis[1], axis[2], axis[3])
-            self.canvas[rr, cc] = 255
+            self.canvas[rr, cc] = 1
 
         if action_category == 2:
             self.stroke_count += 1
@@ -130,19 +138,20 @@ class SketchDesigner(gym.Env):
                         continue
 
             try:
-                self.canvas[rr, cc] = 255
+                self.canvas[rr, cc] = 1
             except IndexError:
                 rr = np.clip(rr, 0, config['STATE_DIM'][0] - 1)
                 cc = np.clip(cc, 0, config['STATE_DIM'][1] - 1)
-                self.canvas[rr, cc] = 255
+                self.canvas[rr, cc] = 1
 
     def step(self, action):
 
         # do_nothing, q_line, q_curve, x0_line, y0_line, x1_line ,y1_line,
         # x0_c, y0_c, x1_c, y1_c, x2_c, y2_c, c
         self.t = self.t + 1
-        if self.t == self.max_T - 1:
+        if self.t >= self.max_T - 1:
             self.terminal = True
+            return self.get_state(), self.find_reward(), self.terminal, {}
 
         self.draw(action)
 
@@ -163,9 +172,12 @@ class SketchDesigner(gym.Env):
         for i in range(n):
             self.canvas = canvas_current
             for tau in range(self.t + 1, self.max_T):
-                _a = self.policy.step(self.get_state().reshape(-1, self.dim[0], self.dim[1], 1)) + np.random.normal(0, 1)
-                self.draw(_a)
+                _a = self.policy.step(self.get_state().reshape(-1, self.dim[0], self.dim[1], 1))[0] + \
+                     np.random.normal(0, 0.5, self.action_space.shape[0])
+                self.draw(_a) #2d to 1d
             r = r + self.classifier.get_score(self.get_state().reshape(-1, self.dim[0], self.dim[1], 1)) / n
+            # Debug
+            #print(_a)
 
         self.canvas = canvas_current
         return r
@@ -186,9 +198,10 @@ class SketchDesigner(gym.Env):
         if self.stroke_count==0:
             #rr = np.random.randint(5, 20, size=2)
             #cc = np.random.randint(5, 20, size=2)
-            return np.random.uniform(0, 0.1, self.canvas.shape)
+            #return np.random.uniform(0, 0.1, self.canvas.shape)
+            return self.canvas
         else:
-            return self.canvas/255
+            return self.canvas
 
 
 def move_point(x, y):

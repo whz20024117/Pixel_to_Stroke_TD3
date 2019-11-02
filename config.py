@@ -8,7 +8,7 @@ config = {
     'C1': 1.0,      # value function parameter in loss
     'C2': 0.0,      # entropy bonus parameter in loss
 
-    'MAX_T': 20,
+    'MAX_T': 10,
     'MAX_ITERATION': 10000,
     'T': 100,
     'TRAIN_EPOCH': 5,
